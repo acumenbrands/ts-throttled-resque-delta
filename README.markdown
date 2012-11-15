@@ -1,21 +1,22 @@
 Delayed Deltas for Thinking Sphinx (with Resque)
 ================================================
-[![Build Status](https://secure.travis-ci.org/agibralter/ts-resque-delta.png?branch=master)](http://travis-ci.org/agibralter/ts-resque-delta)
+Forked from [ts-resque-delta](https://github.com/agibralter/ts-resque-delta)
+to support throttling the rate of delta indexing.
 
 **This code is HEAVILY borrowed from
 [ts-delayed-delta](https://github.com/freelancing-god/ts-delayed-delta).**
 
 Installation
 ------------
-This gem depends on the following gems: _thinking-sphinx_, _resque_, and
-_resque-lock-timeout_.
+This gem depends on the following gems: _thinking-sphinx_, _resque_,
+_resque-lock-timeout_, and _resque-throttle_.
 
-    gem install ts-resque-delta
+    gem install ts-throttled-resque-delta
 
-Add _ts-resque-delta_ to your **Gemfile** file, with the rest of your gem
-dependencies:
+Add _ts-throttled-resque-delta_ to your **Gemfile** file, with the rest of your
+gem dependencies:
 
-    gem 'ts-resque-delta', '1.1.1'
+    gem 'ts-throttled-resque-delta', '~> 1.2.2'
 
 If you're using Rails 3, the rake tasks will automatically be loaded by Rails.
 If you're using Rails 2, add the following line to your **Rakefile**:
@@ -47,6 +48,12 @@ MySQL index on the delta column will generally be a win:
       add_index :foos, :delta
     end
 
+Throttling
+----------
+You can specify a maximum rate at which the delta indexing jobs will be run:
+
+    ThinkingSphinx::Deltas::ResqueDelta::DeltaJob = 30 # seconds
+
 Usage
 -----
 Once you've got it all set up, all you need to do is make sure that the Resque
@@ -66,11 +73,12 @@ locking all the delta indexes at once while the main indexer runs, will lock
 each delta index independently and sequentially. Thay way, your delta indexer
 can run while the main indexer is processing large core indexes.
 
-Contributors (for ts-resque-delta)
+Contributors (for ts-throttled-resque-delta)
 -----------------------------------
 * [Aaron Gibralter](https://github.com/agibralter)
 * [Ryan Schlesinger](https://github.com/ryansch) (Locking/`smart_index`)
 * [Pat Allan](https://github.com/freelancing-god) (FlyingSphinx support)
+* [Brad Ediger](https://github.com/bradediger) (Throttling rate of execution)
 
 Original Contributors (for ts-delayed-delta)
 --------------------------------------------

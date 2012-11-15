@@ -1,8 +1,19 @@
 require 'resque-lock-timeout'
+require 'resque/throttled_job'
 
 # A simple job class that processes a given index.
 #
-class ThinkingSphinx::Deltas::ResqueDelta::DeltaJob
+class ThinkingSphinx::Deltas::ResqueDelta::DeltaJob < Resque::ThrottledJob
+
+  # default to no throttling
+  throttle :disabled => true
+
+  # Reset the throttle counter to allow job to be re-enqueued within the
+  # throttle interval
+  #
+  def self.clear_throttle(*args)
+    Resque.redis.del(key(*args))
+  end
 
   extend Resque::Plugins::LockTimeout
   @queue = :ts_delta

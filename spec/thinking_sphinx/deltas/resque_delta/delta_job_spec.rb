@@ -26,6 +26,51 @@ describe ThinkingSphinx::Deltas::ResqueDelta::DeltaJob do
       subject.perform('foo_delta')
     end
 
+    context "throttling" do
+      let(:job) { ThinkingSphinx::Deltas::ResqueDelta::DeltaJob }
+      before do
+        job.clear_throttle('foo_delta')
+      end
+
+      it "does not throttle the queue if throttling is disabled" do
+        Resque.enqueue(job, 'foo_delta')
+        Resque.enqueue(job, 'foo_delta')
+      end
+
+      it "runs only once within the throttle interval" do
+        ThinkingSphinx::Deltas::ResqueDelta.throttle_interval = 10
+        Resque.enqueue(job, 'foo_delta')
+        expect {
+          Resque.enqueue(job, 'foo_delta')
+        }.to raise_error(Resque::ThrottledError)
+      end
+
+      it "runs twice if requests are spaced outside the throttle interval" do
+        ThinkingSphinx::Deltas::ResqueDelta.throttle_interval = 1
+        Resque.enqueue(job, 'foo_delta')
+        sleep 2
+        Resque.enqueue(job, 'foo_delta')
+      end
+
+      it "disables the throttle interval when set to nil" do
+        ThinkingSphinx::Deltas::ResqueDelta.throttle_interval = nil
+        Resque.enqueue(job, 'foo_delta')
+        Resque.enqueue(job, 'foo_delta')
+      end
+
+      it "can clear the throttle lock" do
+        ThinkingSphinx::Deltas::ResqueDelta.throttle_interval = 10
+        Resque.enqueue(job, 'foo_delta')
+        job.clear_throttle('foo_delta')
+        Resque.enqueue(job, 'foo_delta')
+      end
+
+      it "retrieves the throttle interval" do
+        ThinkingSphinx::Deltas::ResqueDelta.throttle_interval = 123
+        ThinkingSphinx::Deltas::ResqueDelta.throttle_interval.should == 123
+      end
+    end
+
     it "should process just the requested index" do
       subject.should_receive(:`) do |c|
         c.should match(/foo_delta/)

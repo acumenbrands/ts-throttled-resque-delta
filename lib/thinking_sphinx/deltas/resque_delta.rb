@@ -1,4 +1,5 @@
 require 'resque'
+require 'resque-throttle'
 require 'thinking_sphinx'
 
 require 'thinking_sphinx/deltas/resque_delta/flag_as_deleted_set'
@@ -20,11 +21,11 @@ class ThinkingSphinx::Deltas::ResqueDelta < ThinkingSphinx::Deltas::DefaultDelta
       ThinkingSphinx::Deltas::ResqueDelta::DeltaJob
     ]
   end
-  
+
   def self.job_prefix
     'ts-delta'
   end
-  
+
   # LTRIM + LPOP deletes all items from the Resque queue without loading it
   # into client memory (unlike Resque.dequeue).
   # WARNING: This will clear ALL jobs in any queue used by a ResqueDelta job.
@@ -68,11 +69,23 @@ class ThinkingSphinx::Deltas::ResqueDelta < ThinkingSphinx::Deltas::DefaultDelta
     Resque.dequeue(ThinkingSphinx::Deltas::ResqueDelta::DeltaJob, delta)
   end
 
+  def self.throttle_interval=(seconds)
+    if seconds
+      DeltaJob.throttle :can_run_every => seconds, :disabled => false
+    else
+      DeltaJob.throttle :disabled => true
+    end
+  end
+
+  def self.throttle_interval
+    DeltaJob.disabled ? nil : DeltaJob.can_run_every
+  end
+
   # Adds a job to the queue for processing the given model's delta index. A job
   # for hiding the instance in the core index is also created, if an instance is
   # provided.
   #
-  # Neither job will be queued if updates or deltas are disabled, or if the 
+  # Neither job will be queued if updates or deltas are disabled, or if the
   # instance (when given) is not toggled to be in the delta index. The first two
   # options are controlled via ThinkingSphinx.updates_enabled? and
   # ThinkingSphinx.deltas_enabled?.
@@ -86,10 +99,14 @@ class ThinkingSphinx::Deltas::ResqueDelta < ThinkingSphinx::Deltas::DefaultDelta
     return true if skip?(instance)
     model.delta_index_names.each do |delta|
       next if self.class.locked?(delta)
-      Resque.enqueue(
-        ThinkingSphinx::Deltas::ResqueDelta::DeltaJob,
-        delta
-      )
+      begin
+        Resque.enqueue(
+          ThinkingSphinx::Deltas::ResqueDelta::DeltaJob,
+          delta
+        )
+      rescue Resque::ThrottledError
+        # silently ignore
+      end
     end
     if instance
       model.core_index_names.each do |core|
