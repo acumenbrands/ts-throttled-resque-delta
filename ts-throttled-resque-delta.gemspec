@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
   s.add_dependency "thinking-sphinx", ">= 1.4.1"
   s.add_dependency "riddle", ">= 1.5"
   s.add_dependency "resque", "~> 1.10"
-  s.add_dependency "resque-lock-timeout", "~> 0.3.1"
+  s.add_dependency "resque-lock-timeout", "~> 0.4.0"
   s.add_dependency "resque-throttle", "~> 0.3.0"
 
   s.add_development_dependency "rspec", "~> 2.10.0"

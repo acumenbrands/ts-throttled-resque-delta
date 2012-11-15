@@ -8,7 +8,7 @@ class ThinkingSphinx::Deltas::ResqueDelta::DeltaJob < Resque::ThrottledJob
   # default to no throttling
   throttle :disabled => true
 
-  # Reset the throttle counter to allow job to be re-enqueued within the
+  # Reset the throttle lock to allow job to be re-enqueued within the
   # throttle interval
   #
   def self.clear_throttle(*args)
@@ -18,6 +18,7 @@ class ThinkingSphinx::Deltas::ResqueDelta::DeltaJob < Resque::ThrottledJob
   extend Resque::Plugins::LockTimeout
   @queue = :ts_delta
   @lock_timeout = 240
+  @loner = true
 
   # Runs Sphinx's indexer tool to process the index. Currently assumes Sphinx
   # is running.

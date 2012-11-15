@@ -3,7 +3,7 @@ PATH
   specs:
     ts-throttled-resque-delta (1.2.2)
       resque (~> 1.10)
-      resque-lock-timeout (~> 0.3.1)
+      resque-lock-timeout (~> 0.4.0)
       resque-throttle (~> 0.3.0)
       riddle (>= 1.5)
       thinking-sphinx (>= 1.4.1)
@@ -80,7 +80,7 @@ GEM
       redis-namespace (~> 1.0)
       sinatra (>= 0.9.2)
       vegas (~> 0.1.2)
-    resque-lock-timeout (0.3.3)
+    resque-lock-timeout (0.4.0)
       resque (>= 1.8.0)
     resque-throttle (0.3.0)
       resque (>= 1.6.0)

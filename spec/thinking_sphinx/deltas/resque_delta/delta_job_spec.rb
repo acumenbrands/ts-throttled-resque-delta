@@ -1,6 +1,10 @@
 require 'spec_helper'
 
 describe ThinkingSphinx::Deltas::ResqueDelta::DeltaJob do
+  before do
+    Resque.redis = MockRedis.new
+  end
+
   subject do
     ThinkingSphinx::Deltas::ResqueDelta::DeltaJob.tap do |s|
       s.stub(:` => true)
@@ -29,6 +33,7 @@ describe ThinkingSphinx::Deltas::ResqueDelta::DeltaJob do
     context "throttling" do
       let(:job) { ThinkingSphinx::Deltas::ResqueDelta::DeltaJob }
       before do
+        ThinkingSphinx::Deltas::ResqueDelta.throttle_interval = nil
         job.clear_throttle('foo_delta')
       end
 
@@ -68,6 +73,13 @@ describe ThinkingSphinx::Deltas::ResqueDelta::DeltaJob do
       it "retrieves the throttle interval" do
         ThinkingSphinx::Deltas::ResqueDelta.throttle_interval = 123
         ThinkingSphinx::Deltas::ResqueDelta.throttle_interval.should == 123
+      end
+
+      it "enforces uniqueness in the queue" do
+        expect {
+          Resque.enqueue(job, 'foo_delta')
+          Resque.enqueue(job, 'foo_delta')
+        }.to change { Resque.size('ts_delta') }.by(1)
       end
     end
 

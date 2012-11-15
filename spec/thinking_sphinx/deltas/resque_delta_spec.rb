@@ -39,104 +39,100 @@ describe ThinkingSphinx::Deltas::ResqueDelta do
       end
     end
 
-    context "with real Resque.enqueue" do
-      it "swallows throttle errors" do
-        ThinkingSphinx::Deltas::ResqueDelta.throttle_interval = 10
-        subject.index(model, instance)
-        subject.index(model, instance)
-      end
+    before :each do
+      Resque.stub(:enqueue_without_throttle => true)
     end
 
-    context "with fake Resque.enqueue" do
+    context 'updates disabled' do
       before :each do
-        Resque.stub(:enqueue => true)
+        ThinkingSphinx.updates_enabled = false
       end
 
-      context 'updates disabled' do
-        before :each do
-          ThinkingSphinx.updates_enabled = false
-        end
-
-        it "should not enqueue a delta job" do
-          Resque.should_not_receive(:enqueue)
-          subject.index(model)
-        end
-
-        it "should not add a flag as deleted document to the set" do
-          subject.index(model, instance)
-          flag_as_deleted_document_in_set?.should be_false
-        end
-      end
-
-      context 'deltas disabled' do
-        before :each do
-          ThinkingSphinx.deltas_enabled = false
-        end
-
-        it "should not enqueue a delta job" do
-          Resque.should_not_receive(:enqueue)
-          subject.index(model)
-        end
-
-        it "should not add a flag as deleted document to the set" do
-          subject.index(model, instance)
-          flag_as_deleted_document_in_set?.should be_false
-        end
-      end
-
-      context "instance isn't toggled" do
-        before :each do
-          subject.stub(:toggled => false)
-          ThinkingSphinx::Deltas::ResqueDelta::DeltaJob.clear_throttle('foo_delta')
-          ThinkingSphinx::Deltas::ResqueDelta.throttle_interval = nil
-        end
-
-        it "should not enqueue a delta job" do
-          Resque.should_not_receive(:enqueue)
-          subject.index(model, instance)
-        end
-
-        it "should not add a flag as deleted document to the set" do
-          subject.index(model, instance)
-          flag_as_deleted_document_in_set?.should be_false
-        end
-      end
-
-      it "should enqueue a delta job" do
-        Resque.should_receive(:enqueue).once.with(
-          ThinkingSphinx::Deltas::ResqueDelta::DeltaJob,
-          'foo_delta'
-        )
+      it "should not enqueue a delta job" do
+        Resque.should_not_receive(:enqueue)
         subject.index(model)
       end
 
-      it "passes through other errors" do
-        Resque.stub(:enqueue).and_raise("another error")
-        expect {
-          subject.index(model, instance)
-        }.to raise_error(RuntimeError)
+      it "should not add a flag as deleted document to the set" do
+        subject.index(model, instance)
+        flag_as_deleted_document_in_set?.should be_false
+      end
+    end
+
+    context 'deltas disabled' do
+      before :each do
+        ThinkingSphinx.deltas_enabled = false
+      end
+
+      it "should not enqueue a delta job" do
+        Resque.should_not_receive(:enqueue)
+        subject.index(model)
+      end
+
+      it "should not add a flag as deleted document to the set" do
+        subject.index(model, instance)
+        flag_as_deleted_document_in_set?.should be_false
+      end
+    end
+
+    context "instance isn't toggled" do
+      before :each do
+        subject.stub(:toggled => false)
+        ThinkingSphinx::Deltas::ResqueDelta::DeltaJob.clear_throttle('foo_delta')
+        ThinkingSphinx::Deltas::ResqueDelta.throttle_interval = nil
+      end
+
+      it "should not enqueue a delta job" do
+        Resque.should_not_receive(:enqueue)
+        subject.index(model, instance)
+      end
+
+      it "should not add a flag as deleted document to the set" do
+        subject.index(model, instance)
+        flag_as_deleted_document_in_set?.should be_false
+      end
+    end
+
+    it "should enqueue a delta job" do
+      Resque.should_receive(:enqueue).once.with(
+        ThinkingSphinx::Deltas::ResqueDelta::DeltaJob,
+        'foo_delta'
+      )
+      subject.index(model)
+    end
+
+    it "passes through other errors" do
+      Resque.stub(:enqueue).and_raise("another error")
+      expect {
+        subject.index(model, instance)
+      }.to raise_error(RuntimeError)
+    end
+
+    it "should add the flag as deleted document id to the set" do
+      subject.index(model, instance)
+      flag_as_deleted_document_in_set?.should be_true
+    end
+
+    context "delta index is locked" do
+      before :each do
+        ThinkingSphinx::Deltas::ResqueDelta.stub(:locked?).and_return(true)
+      end
+
+      it "should not enqueue a delta job" do
+        Resque.should_not_receive(:enqueue)
+        subject.index(model, instance)
       end
 
       it "should add the flag as deleted document id to the set" do
         subject.index(model, instance)
         flag_as_deleted_document_in_set?.should be_true
       end
+    end
 
-      context "delta index is locked" do
-        before :each do
-          ThinkingSphinx::Deltas::ResqueDelta.stub(:locked?).and_return(true)
-        end
-
-        it "should not enqueue a delta job" do
-          Resque.should_not_receive(:enqueue)
-          subject.index(model, instance)
-        end
-
-        it "should add the flag as deleted document id to the set" do
-          subject.index(model, instance)
-          flag_as_deleted_document_in_set?.should be_true
-        end
-      end
+    it "swallows throttle errors" do
+      ThinkingSphinx::Deltas::ResqueDelta.throttle_interval = 10
+      subject.index(model, instance)
+      subject.index(model, instance)
     end
   end
 
